@@ -1,0 +1,32 @@
+[project]
+name = "ko-embed"
+version = "0.1.0"
+description = "Korean query embedding pipeline for change-point detection research"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "sentence-transformers>=3.0",
+    "umap-learn>=0.5",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "tqdm>=4.0",
+    "hydra-core>=1.3",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

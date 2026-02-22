@@ -1,0 +1,6 @@
+# ko-embed/configs/model/sroberta.yaml
+_target_: qcd.embedding.sroberta.SRoBERTaEncoder
+model_id: snunlp/KR-SBERT-V40K-klueNLI-augSTS
+max_length: 512
+batch_size: 64
+normalize_embeddings: true

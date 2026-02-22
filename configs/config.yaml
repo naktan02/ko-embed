@@ -1,0 +1,21 @@
+# ko-embed/configs/config.yaml
+defaults:
+  - _self_
+  - model: bge_m3 # 기본 모델 설정
+
+project:
+  name: ko-embed
+  seed: 42
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  # 00_preprocess.py 용 파라미터 (실행 시 override 가능)
+  input: ??? # 필수: 예) data/raw/aihub_558.xlsx
+  text_col: query # 텍스트 컬럼명
+  label_col: category # 레이블 컬럼명
+  source: "" # 출처 태그 (비워도 됨)
+  output: data/processed/queries.jsonl
+
+scoring:
+  categories: ["distress", "self_harm", "help_seeking", "neutral"]

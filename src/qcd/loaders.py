@@ -118,11 +118,161 @@ class TalksetsLoader(BaseLoader):
         return rows
 
 
+# ── 파인튜닝용 데이터셋 로더 ──────────────────────────────────────────────────
+
+class OuraflaLoader(BaseLoader):
+    """ourafla 4-Class Mental Health 데이터셋 로더.
+
+    load() → 원본 레이블 그대로 반환 (raw I/O)
+    Phase 2에서 apply_label_map(records, LABEL_MAP)으로 카테고리 변환
+
+    CSV 컬럼: text, status
+    원본 레이블: Suicidal / Depression / Anxiety / Normal
+    """
+
+    # Phase 2 참조용 매핑 — load()에서는 사용하지 않음
+    LABEL_MAP: dict[str, str] = {
+        "Suicidal":   "suicidal",
+        "Depression": "depression",
+        "Anxiety":    "anxiety",
+        "Normal":     "normal",
+    }
+    SOURCE = "ourafla"
+
+    def load(self, path: Path) -> list[dict]:
+        """원본 status 값을 original_label로 그대로 저장."""
+        import csv
+
+        rows: list[dict] = []
+        with open(path, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                text = row.get("text", "").strip()
+                original_label = row.get("status", "").strip()
+                if text and original_label:
+                    rows.append({
+                        "text":           text,
+                        "original_label": original_label,
+                        "source":         self.SOURCE,
+                    })
+        return rows
+
+
+class DepressionEmoLoader(BaseLoader):
+    """DepressionEmo 8감정 멀티레이블 로더.
+
+    load() → emotions 리스트를 그대로 반환 (raw I/O)
+    Phase 2에서 apply_emotion_map(records, EMOTION_MAP, PRIORITY)으로 카테고리 변환
+
+    JSON 컬럼: text, emotions (list)
+    """
+
+    # 감정 → 카테고리 (None = 제외)
+    # ⚠️ 모두 임시값 — 데이터 샘플 확인 후 Phase 2에서 확정
+    EMOTION_MAP: dict[str, str | None] = {
+        # suicide intent는 이견 없이 suicidal
+        "suicide intent":             "suicidal",
+
+        # 아래는 탐색 후 결정: hopelessness는 자살 위험 요인이기도 함
+        # "hopelessness": "suicidal",  # 대안: 자살 생각과 연결성 높음
+        "hopelessness":               "depression",
+
+        "emptiness":                  "depression",
+        "worthlessness":              "depression",
+        "sadness":                    "depression",
+        "loneliness":                 "depression",
+        "brain dysfunction (forget)": "depression",
+
+        # anger: 세 가지 대안 중 데이터 보고 결정
+        # "anger": "anxiety",    # 대안 1: 공격적 긴장 → anxiety
+        # "anger": "depression", # 대안 2: 우울의 일환
+        "anger":                      None,  # 현재: 제외
+    }
+    # 멀티레이블 충돌 시 우선순위 — Phase 2에서 apply_emotion_map()이 사용
+    PRIORITY: list[str] = ["suicidal", "depression"]
+
+    # LABEL_MAP은 BaseLoader 인터페이스 호환용 (카테고리 목록 참조)
+    LABEL_MAP: dict[str, str] = {v: v for v in EMOTION_MAP.values() if v}
+    SOURCE = "depressionemo"
+
+    def load(self, path: Path) -> list[dict]:
+        """emotions 리스트를 그대로 저장 — 카테고리 매핑 없음."""
+        data = json.load(open(path, encoding="utf-8"))
+        rows: list[dict] = []
+        for item in data:
+            text = item.get("text", "").strip()
+            emotions: list[str] = item.get("emotions", [])
+            if text and emotions:
+                rows.append({
+                    "text":    text,
+                    "emotions": emotions,
+                    "source":  self.SOURCE,
+                })
+        return rows
+
+
+class CSSRSLoader(BaseLoader):
+    """C-SSRS 7단계 레이블 Reddit SuicideWatch 로더.
+
+    load() → 원본 cssrs_level(0~6)을 그대로 반환 (raw I/O)
+    Phase 2에서 데이터 확인 후 LABEL_MAP 채우고 apply_label_map() 사용
+
+    CSV 컬럼: 실제 컬럼명은 탐색 후 확인 (자동 탐지)
+    """
+
+    # Phase 2에서 데이터 확인 후 아래 매핑을 검토·수정하여 주석 해제할 것
+    # LABEL_MAP: dict[str, str] = {
+    #     "0": "normal",
+    #     "1": "depression",   # 수동적 자살 생각, 비특이적
+    #     "2": "depression",   # 수동적 자살 생각, 비특이적
+    #     "3": "suicidal",     # 방법 있음
+    #     "4": "suicidal",     # 계획 있음
+    #     "5": "suicidal",     # 의도 있음
+    #     "6": "suicidal",     # 시도
+    # }
+    LABEL_MAP: dict[str, str] = {}  # 탐색 전 — 비워둠
+    SOURCE = "cssrs"
+
+    # 레벨/텍스트 컬럼 탐지 우선순위 키워드
+    _LEVEL_KEYWORDS = ["cssrs", "level", "score", "label", "class"]
+    _TEXT_KEYWORDS  = ["text", "post", "body", "content", "title"]
+
+    def _detect_col(self, headers: list[str], keywords: list[str]) -> str | None:
+        for kw in keywords:
+            for h in headers:
+                if kw in h.lower():
+                    return h
+        return headers[0] if headers else None
+
+    def load(self, path: Path) -> list[dict]:
+        """Phase 1: 원본 레벨 그대로 반환 (카테고리 매핑 없음)."""
+        import csv
+
+        rows: list[dict] = []
+        with open(path, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            headers = list(reader.fieldnames or [])
+            level_col = self._detect_col(headers, self._LEVEL_KEYWORDS)
+            text_col  = self._detect_col(headers, self._TEXT_KEYWORDS)
+
+            for row in reader:
+                text = row.get(text_col or "", "").strip()
+                level_raw = str(row.get(level_col or "", "")).strip()
+                if text and level_raw:
+                    rows.append({
+                        "text":        text,
+                        "cssrs_level": level_raw,  # 원본 레벨 그대로
+                        "source":      self.SOURCE,
+                    })
+        return rows
+
+
 # ── 로더 레지스트리 ────────────────────────────────────────────────────────────
 # 새 데이터셋 추가 시: 로더 클래스를 위에 작성 후 여기에 한 줄만 추가
 LOADERS: dict[str, type[BaseLoader]] = {
-    "talksets": TalksetsLoader,
-    # "aihub558": Aihub558Loader,
+    "talksets":      TalksetsLoader,
+    "ourafla":       OuraflaLoader,
+    "depressionemo": DepressionEmoLoader,
+    "cssrs":         CSSRSLoader,
 }
 
 

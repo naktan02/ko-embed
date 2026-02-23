@@ -1,6 +1,7 @@
 # ko-embed/configs/model/bge_m3.yaml
-_target_: qcd.embedding.bge_m3.BGEM3Encoder # 인스턴스화할 클래스 경로
+_target_: qcd.embedding.bge_m3.BGEM3Encoder
+name: bge_m3
 model_id: BAAI/bge-m3
 max_length: 8192
-batch_size: 32
+batch_size: 32 # GPU(RTX 4080 SUPER)면 64~128로 올려도 됨
 normalize_embeddings: true

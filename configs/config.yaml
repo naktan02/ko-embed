@@ -10,12 +10,23 @@ project:
 data:
   raw_dir: data/raw
   processed_dir: data/processed
+  artifacts_dir: artifacts # 루트 artifacts/ — .gitignore와 일치
   # 00_preprocess.py 용 파라미터 (실행 시 override 가능)
-  input: ??? # 필수: 예) data/raw/aihub_558.xlsx
-  text_col: query # 텍스트 컬럼명
-  label_col: category # 레이블 컬럼명
-  source: "" # 출처 태그 (비워도 됨)
+  input: data/raw/talksets-train-1/talksets-train-1_aihub.json
+  source: talksets # LOADERS 딕셔너리 키와 일치
+  text_col: text # JSON의 경우 사용 안 함 (tabular 전용)
+  label_col: types # JSON의 경우 사용 안 함 (tabular 전용)
   output: data/processed/queries.jsonl
 
-scoring:
-  categories: ["distress", "self_harm", "help_seeking", "neutral"]
+# scoring.categories 는 config에서 제거됨 —
+# loaders.py 각 Loader의 LABEL_MAP.values()가 단일 소스
+
+umap:
+  n_neighbors: 15
+  min_dist: 0.05
+  max_samples: 10000 # 시각화용 최대 샘플 수 (카테고리 균등 샘플링)
+
+search:
+  query: "" # CLI에서 override 필수: search.query="문장"
+  topk: 10 # 상위 몇 개 결과를 출력할지
+

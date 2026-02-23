@@ -1,0 +1,6 @@
+﻿task,type,split,main_score,ndcg_at_10,recall_at_10
+Ko-StrategyQA,Retrieval,dev,0.7955,0.7955,0.8539
+AutoRAGRetrieval,Retrieval,test,0.8738,0.8738,0.9825
+PublicHealthQA,Retrieval,test,0.8155,0.8155,0.9351
+XPQARetrieval,Retrieval,test,0.3814,0.3814,0.4963
+KorSTS,STS,test,0.8159,,

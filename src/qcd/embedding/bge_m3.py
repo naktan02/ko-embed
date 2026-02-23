@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
-# import yaml  <-- 이제 필요 없습니다.
 
 from qcd.embedding.base import BaseEncoder
 
@@ -31,21 +28,25 @@ class BGEM3Encoder(BaseEncoder):
     def _load(self) -> None:
         if self._model is not None:
             return
+        import torch
+        use_fp16 = torch.cuda.is_available()  # GPU 있으면 fp16으로 속도/메모리 최적화
         try:
             # FlagEmbedding 우선 시도 (BGE-M3 full feature)
             from FlagEmbedding import BGEM3FlagModel  # type: ignore
 
             self._model = BGEM3FlagModel(
                 self.model_id,
-                use_fp16=False,
+                use_fp16=use_fp16,
             )
             self._backend = "flag"
+            print(f"  [BGEM3] FlagEmbedding 백엔드 (fp16={use_fp16})")
         except ImportError:
             # fallback: sentence-transformers
             from sentence_transformers import SentenceTransformer  # type: ignore
 
             self._model = SentenceTransformer(self.model_id)
             self._backend = "sbert"
+            print("  [BGEM3] SentenceTransformers 백엔드")
 
     def encode(self, texts: list[str], **kwargs) -> np.ndarray:
         self._load()
@@ -57,6 +58,7 @@ class BGEM3Encoder(BaseEncoder):
                 return_dense=True,
                 return_sparse=False,
                 return_colbert_vecs=False,
+                show_progress_bar=True,
             )
             vecs = np.array(out["dense_vecs"], dtype=np.float32)
         else:

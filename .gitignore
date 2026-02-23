@@ -11,20 +11,30 @@ __pycache__/
 dist/
 build/
 
-# 데이터 (원본은 git에 올리지 않음)
+# 데이터 (원본 및 생성 파일은 git에 올리지 않음)
+data/*
 data/raw/*
 data/interim/*
 data/processed/*
+data/artifacts/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
+!data/artifacts/.gitkeep
 
-# 산출물
+# Hydra 자동 생성 로그/출력 폴더
+outputs/
+multirun/
+
+# 산출물 (루트 artifacts/ 경로)
+artifacts/*
 artifacts/embeddings/*
 artifacts/figures/*
+artifacts/plots/*
 artifacts/reports/*
 !artifacts/embeddings/.gitkeep
 !artifacts/figures/.gitkeep
+!artifacts/plots/.gitkeep
 !artifacts/reports/.gitkeep
 
 # HuggingFace 모델 캐시

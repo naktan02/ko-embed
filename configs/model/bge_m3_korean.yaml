@@ -1,0 +1,8 @@
+# ko-embed/configs/model/bge_m3_korean.yaml
+# upskyy/bge-m3-korean: BGE-M3를 한국어 데이터로 추가 학습한 모델
+_target_: qcd.embedding.bge_m3.BGEM3Encoder
+name: bge_m3_korean
+model_id: upskyy/bge-m3-korean
+max_length: 8192
+batch_size: 32
+normalize_embeddings: true

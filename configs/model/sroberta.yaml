@@ -1,5 +1,6 @@
 # ko-embed/configs/model/sroberta.yaml
-_target_: qcd.embedding.sroberta.SRoBERTaEncoder
+_target_: qcd.embedding.sbert.SentenceTransformerEncoder
+name: sroberta
 model_id: snunlp/KR-SBERT-V40K-klueNLI-augSTS
 max_length: 512
 batch_size: 64

@@ -47,6 +47,14 @@ class BaseLoader(ABC):
           - source (str)  : 데이터 출처 태그
         """
 
+    def get_label(self, row: dict) -> str:
+        """샘플링·표시용 라벨 문자열 반환.
+
+        _print_stats의 라벨별 그룹화에 사용됩니다.
+        서브클래스에서 오버라이드하여 데이터셋별 필드를 반환하세요.
+        """
+        return row.get("label", row.get("source", "?"))
+
 
 class TalksetsLoader(BaseLoader):
     """AIHub 비윤리 발화 talksets JSON 로더.
@@ -156,6 +164,9 @@ class OuraflaLoader(BaseLoader):
                     })
         return rows
 
+    def get_label(self, row: dict) -> str:
+        return row.get("original_label", "?")
+
 
 class DepressionEmoLoader(BaseLoader):
     """DepressionEmo 8감정 멀티레이블 로더.
@@ -208,6 +219,10 @@ class DepressionEmoLoader(BaseLoader):
                     "source":  self.SOURCE,
                 })
         return rows
+
+    def get_label(self, row: dict) -> str:
+        # 그룹화 키: 감정 조합 (정렬해서 순서 무관하게)
+        return str(sorted(row.get("emotions", [])))
 
 
 class CSSRSLoader(BaseLoader):
@@ -264,6 +279,9 @@ class CSSRSLoader(BaseLoader):
                         "source":      self.SOURCE,
                     })
         return rows
+
+    def get_label(self, row: dict) -> str:
+        return str(row.get("cssrs_level", "?"))
 
 
 # ── 로더 레지스트리 ────────────────────────────────────────────────────────────

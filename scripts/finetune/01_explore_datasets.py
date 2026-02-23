@@ -26,6 +26,11 @@ DATASET_SOURCES: dict[str, dict] = {
     "ourafla": {
         "type":    "huggingface",
         "hf_repo": "ourafla/Mental-Health_Text-Classification_Dataset",
+        # feature_engineered.csv는 컬럼 수가 달라 스키마 충돌 → 원하는 파일만 지정
+        "hf_files": {
+            "train": "mental_heath_unbanlanced.csv",
+            "test":  "mental_health_combined_test.csv",
+        },
         "raw_dir": Path("data/finetune_raw/ourafla"),
     },
     "depressionemo": {
@@ -52,7 +57,15 @@ def _download_huggingface(name: str, cfg: dict) -> None:
 
     print(f"[{name}] HuggingFace 다운로드 중: {cfg['hf_repo']}")
     raw_dir.mkdir(parents=True, exist_ok=True)
-    ds = load_dataset(cfg["hf_repo"])
+    if "hf_files" in cfg:
+        # 파일별 스키마가 달라 load_dataset()이 실패하는 경우 개별 파일 지정
+        data_files = {
+            split: f"hf://datasets/{cfg['hf_repo']}/{fname}"
+            for split, fname in cfg["hf_files"].items()
+        }
+        ds = load_dataset("csv", data_files=data_files)
+    else:
+        ds = load_dataset(cfg["hf_repo"])
     for split_name, split_ds in ds.items():
         out = raw_dir / f"{split_name}.csv"
         split_ds.to_csv(str(out))
@@ -115,7 +128,7 @@ def _collect_files(raw_dir: Path, source_type: str) -> list[Path]:
     return sorted(raw_dir.glob(ext))
 
 
-def _print_stats(name: str, rows: list[dict]) -> None:
+def _print_stats(name: str, rows: list[dict], loader) -> None:
     """로더에서 반환된 레코드 리스트의 통계를 출력 (raw 포맷 기준)."""
     if not rows:
         print("  ⚠️ 로드된 데이터 없음")
@@ -148,29 +161,36 @@ def _print_stats(name: str, rows: list[dict]) -> None:
             dist[k] = dist.get(k, 0) + 1
         print(f"  C-SSRS 레벨 분포: {dict(sorted(dist.items()))}")
 
-    # 샘플 5개
-    print("  샘플:")
-    for r in rows[:5]:
-        preview = r["text"][:100].replace("\n", " ")
-        if source == "ourafla":
-            tag = r.get("original_label", "?")
-        elif source == "depressionemo":
-            tag = str(r.get("emotions", []))
-        else:
-            tag = f"level={r.get('cssrs_level', '?')}"
-        print(f"    [{tag}] {preview}")
+    # 샘플 30개 — loader.get_label()로 라벨별 균등 추출
+    SAMPLE_TOTAL = 30
+
+    groups: dict[str, list[dict]] = {}
+    for r in rows:
+        k = loader.get_label(r)
+        groups.setdefault(k, []).append(r)
+
+    n_per = max(1, SAMPLE_TOTAL // len(groups))
+    samples = [r for grp in groups.values() for r in grp[:n_per]]
+
+    print(f"  샘플 (라벨별 최대 {n_per}개):")
+    for r in samples:
+        preview = r["text"][:200].replace("\n", " ")
+        print(f"    [{loader.get_label(r)}] {preview}")
 
 
-def explore_all() -> None:
-    """LOADERS에 등록된 파인튜닝 로더로 각 데이터셋 탐색."""
-    FINETUNE_LOADERS = ("ourafla", "depressionemo", "cssrs")
+def explore_all(targets: list[str] | None = None) -> None:
+    """LOADERS에 등록된 파인튜닝 로더로 각 데이터셋 탐색.
+
+    targets가 None이면 DATASET_SOURCES의 모든 키를 탐색.
+    """
+    names = targets if targets is not None else list(DATASET_SOURCES.keys())
     sep = "=" * 64
 
     print(sep)
     print("Phase 1 — 데이터셋 기초 탐색")
     print(sep)
 
-    for name in FINETUNE_LOADERS:
+    for name in names:
         loader_cls = LOADERS.get(name)
         src_cfg = DATASET_SOURCES.get(name)
         if loader_cls is None or src_cfg is None:
@@ -187,9 +207,22 @@ def explore_all() -> None:
             all_rows.extend(rows)
             print(f"  └ {fpath.name}: {len(rows):,}행")
 
-        _print_stats(name, all_rows)
+        _print_stats(name, all_rows, loader)
 
 
 if __name__ == "__main__":
-    download_all()
-    explore_all()
+    import sys
+    # 인자 없으면 전체 실행, 있으면 해당 데이터셋만
+    # 예) uv run python scripts/finetune/01_explore_datasets.py ourafla cssrs
+    targets = sys.argv[1:] or list(DATASET_SOURCES.keys())
+    unknown = [t for t in targets if t not in DATASET_SOURCES]
+    if unknown:
+        print(f"[오류] 알 수 없는 데이터셋: {unknown}")
+        print(f"  사용 가능: {list(DATASET_SOURCES.keys())}")
+        sys.exit(1)
+
+    for name in targets:
+        cfg = DATASET_SOURCES[name]
+        _DOWNLOADERS[cfg["type"]](name, cfg)
+    print()
+    explore_all(targets)

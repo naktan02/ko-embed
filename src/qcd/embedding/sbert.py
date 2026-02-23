@@ -30,11 +30,13 @@ class SentenceTransformerEncoder(BaseEncoder):
     def _load(self) -> None:
         if self._model is not None:
             return
+        import torch
         from sentence_transformers import SentenceTransformer  # type: ignore
 
-        self._model = SentenceTransformer(self.model_id)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._model = SentenceTransformer(self.model_id, device=device)
         self._model.max_seq_length = self.max_length
-        print(f"  [SentenceTransformer] {self.model_id} 로드 완료")
+        print(f"  [SentenceTransformer] {self.model_id} 로드 완료 (device={device})")
 
     def encode(self, texts: list[str], **kwargs) -> np.ndarray:
         self._load()

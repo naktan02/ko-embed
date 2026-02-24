@@ -207,17 +207,21 @@ class DepressionEmoLoader(BaseLoader):
 
     def load(self, path: Path) -> list[dict]:
         """emotions 리스트를 그대로 저장 — 카테고리 매핑 없음."""
-        data = json.load(open(path, encoding="utf-8"))
         rows: list[dict] = []
-        for item in data:
-            text = item.get("text", "").strip()
-            emotions: list[str] = item.get("emotions", [])
-            if text and emotions:
-                rows.append({
-                    "text":    text,
-                    "emotions": emotions,
-                    "source":  self.SOURCE,
-                })
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                item = json.loads(line)
+                text = item.get("text", "").strip()
+                emotions: list[str] = item.get("emotions", [])
+                if text and emotions:
+                    rows.append({
+                        "text":    text,
+                        "emotions": emotions,
+                        "source":  self.SOURCE,
+                    })
         return rows
 
     def get_label(self, row: dict) -> str:

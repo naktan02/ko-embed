@@ -16,7 +16,6 @@ from pathlib import Path
 
 import kagglehub
 from datasets import load_dataset
-from kagglehub import KaggleDatasetAdapter
 
 from qcd.loaders import LOADERS
 
@@ -35,7 +34,7 @@ DATASET_SOURCES: dict[str, dict] = {
     },
     "depressionemo": {
         "type":       "github_json",
-        "base_url":   "https://raw.githubusercontent.com/abuBakarSiddiqurRahman/DepressionEmo/main",
+        "base_url":   "https://raw.githubusercontent.com/abuBakarSiddiqurRahman/DepressionEmo/main/Dataset",
         "files":      ["train.json", "val.json", "test.json"],
         "raw_dir":    Path("data/finetune_raw/depressionemo"),
     },
@@ -84,8 +83,8 @@ def _download_github_json(name: str, cfg: dict) -> None:
         url = f"{cfg['base_url']}/{fname}"
         dest = raw_dir / fname
         urllib.request.urlretrieve(url, str(dest))
-        data = json.load(open(dest, encoding="utf-8"))
-        print(f"  {fname}: {len(data):,}행 → {dest}")
+        size_kb = dest.stat().st_size / 1024
+        print(f"  {fname}: {size_kb:.0f}KB → {dest}")
 
 
 def _download_kaggle(name: str, cfg: dict) -> None:
@@ -96,14 +95,19 @@ def _download_kaggle(name: str, cfg: dict) -> None:
 
     print(f"[{name}] Kaggle 다운로드 중: {cfg['kaggle_id']}")
     raw_dir.mkdir(parents=True, exist_ok=True)
-    df = kagglehub.load_dataset(
-        KaggleDatasetAdapter.PANDAS,
-        cfg["kaggle_id"],
-        "",
-    )
-    out = raw_dir / "data.csv"
-    df.to_csv(out, index=False, encoding="utf-8")
-    print(f"  전체: {len(df):,}행 → {out}")
+    import shutil
+    cache_path = Path(kagglehub.dataset_download(cfg["kaggle_id"]))
+    csv_files = list(cache_path.glob("*.csv"))
+    if not csv_files:
+        print(f"  [오류] CSV 파일을 찾을 수 없음: {cache_path}")
+        return
+    for src in csv_files:
+        dest = raw_dir / src.name
+        shutil.copy2(src, dest)
+        # 행 수 확인
+        with open(dest, encoding="utf-8") as f:
+            n_lines = sum(1 for _ in f) - 1  # 헤더 제외
+        print(f"  {src.name}: {n_lines:,}행 → {dest}")
 
 
 _DOWNLOADERS = {

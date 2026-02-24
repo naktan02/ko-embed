@@ -1,27 +1,30 @@
 """
 07_bench.py
 mteb 라이브러리로 한국어 Retrieval/STS 벤치마크를 실행합니다.
-SentenceTransformer를 직접 mteb에 전달하여 인환성 문제를 방지합니다.
 
-평가 태스크:
-  [Retrieval]  nDCG@10 기준 — 쿼리 관련 문서 검색 능력
-    - Ko-StrategyQA       : 한국어 멀티홉 QA (corpus 9,843개)
-    - AutoRAGRetrieval    : 금융/공공/의료/법률/커머스 문서 검색 (corpus 834개)
-    - PublicHealthQA      : 의료/공중보건 문서 검색 (corpus 1,774개)
-    - XPQARetrieval       : 다양한 도메인 문서 검색 (corpus 81,710개)
+태스크 그룹:
+  [retrieval]  nDCG@10 수치 기준 — 쿼리 관련 문서 검색 능력
+    - Ko-StrategyQA       : 한국어 멀티혽 QA
+    - AutoRAGRetrieval    : 5개 도메인 문서 검색
+    - PublicHealthQA      : 의료/공중보건
+    - XPQARetrieval       : 다양한 도메인
 
-  [STS]  Spearman ρ 기준 — 문장 간 의미 유사도
-    - KorSTS              : 한국어 STS (KLUE-STS와 다른 출처, 1,376쌍)
+  [sts]  Spearman ρ 기준 — 문장 간 의미 유사도 (파인튜닝 후 회귀 체크용)
+    - KorSTS              : 한국어 STS (1,376쌍)
+    - KLUE-STS            : KLUE 벤치마크 STS
 
-제외 (코퍼스 너무 큼):
-  - MIRACLRetrieval (106M), MrTidyRetrieval (58M)
-  - MultiLongDocRetrieval (497K), BelebeleRetrieval (522K)
+실행 예:
+  # 전체 태스크
+  python scripts/explore/07_bench.py model=bge_m3_ko
 
-실행 예시:
-  uv run python scripts/explore/07_bench.py model=bge_m3
-  uv run python scripts/explore/07_bench.py model=bge_m3_ko
-  uv run python scripts/explore/07_bench.py model=bge_m3_korean
-  uv run python scripts/explore/07_bench.py model=kure_v1
+  # STS만 (파인튜닝 후 회귀 체크)
+  python scripts/explore/07_bench.py model=bge_m3_ko +group=sts
+
+  # Retrieval만
+  python scripts/explore/07_bench.py model=bge_m3_ko +group=retrieval
+
+  # 파인튜닝된 모델 로컬 경로 지정
+  python scripts/explore/07_bench.py model=bge_m3_ko model.model_id=models/finetuned/bge_m3_ko +group=sts
 """
 
 from __future__ import annotations
@@ -36,15 +39,20 @@ from sentence_transformers import SentenceTransformer
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-TASKS = [
-    # ── Retrieval (nDCG@10) ───────────────────────────────────────────────────
-    "Ko-StrategyQA",        # 멀티홉 QA 검색, corpus 9,843개
-    "AutoRAGRetrieval",     # 5개 도메인 문서 검색, corpus 834개
-    "PublicHealthQA",       # 의료/공중보건, corpus 1,774개
-    "XPQARetrieval",        # 다양한 도메인, corpus 81,710개
-    # ── STS (Spearman ρ) ──────────────────────────────────────────────────────
-    "KorSTS",               # 한국어 STS, 1,376쌍
-]
+# 태스크 그룹 정의 — `+group=<태스크>` 오버라이드로 선택 실행
+TASK_GROUPS: dict[str, list[str]] = {
+    "retrieval": [
+        "Ko-StrategyQA",        # 멀티혽 QA 검색, corpus 9,843개
+        "AutoRAGRetrieval",     # 5개 도메인 문서 검색, corpus 834개
+        "PublicHealthQA",       # 의료/공중보건, corpus 1,774개
+        "XPQARetrieval",        # 다양한 도메인, corpus 81,710개
+    ],
+    "sts": [
+        "KorSTS",               # 한국어 STS, 1,376쌍
+        "KLUE-STS",             # KLUE 벤치마크 STS
+    ],
+}
+TASK_GROUPS["all"] = TASK_GROUPS["retrieval"] + TASK_GROUPS["sts"]
 
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
@@ -53,11 +61,15 @@ def main(cfg: DictConfig) -> None:
 
     model_name: str = cfg.model.get("name", "model")
     model_id: str = cfg.model.get("model_id", "")
+    group: str = cfg.get("group", "all")          # +group=sts | retrieval | all
+    tasks = TASK_GROUPS.get(group, TASK_GROUPS["all"])
+
     out_dir = Path("results")
     out_dir.mkdir(exist_ok=True)
     mteb_out = out_dir / f"mteb_{model_name}"
 
     print(f"\n[모델] {model_name}  ({model_id}) 로드 중..")
+    print(f"[그룹] {group}  →  {tasks}")
     # SentenceTransformer를 직접 사용 → mteb과 완전 호환
     st_model = SentenceTransformer(model_id, trust_remote_code=True)
     print(f"  임베딩 차원: {st_model.get_sentence_embedding_dimension()}")
@@ -65,7 +77,7 @@ def main(cfg: DictConfig) -> None:
     # ── 태스크별 실행 ──────────────────────────────────────────────────────────
     summary: list[dict] = []
 
-    for task_name in TASKS:
+    for task_name in tasks:
         print(f"\n{'='*55}")
         print(f"  태스크: {task_name}")
         print(f"{'='*55}")

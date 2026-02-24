@@ -1,0 +1,26 @@
+{
+  "dataset_revision": "349481ec73fff722f88e0453ca05c77a447d967c",
+  "task_name": "KLUE-STS",
+  "mteb_version": "2.8.4",
+  "scores": {
+    "validation": [
+      {
+        "pearson": 0.865586,
+        "spearman": 0.877394,
+        "cosine_pearson": 0.865586,
+        "cosine_spearman": 0.877394,
+        "manhattan_pearson": 0.879416,
+        "manhattan_spearman": 0.877416,
+        "euclidean_pearson": 0.879248,
+        "euclidean_spearman": 0.877394,
+        "main_score": 0.877394,
+        "hf_subset": "default",
+        "languages": [
+          "kor-Hang"
+        ]
+      }
+    ]
+  },
+  "evaluation_time": 1.2095327377319336,
+  "kg_co2_emissions": null
+}

@@ -1,3 +1,0 @@
-﻿task,type,split,main_score,ndcg_at_10,recall_at_10
-KorSTS,STS,test,0.8125,,
-KLUE-STS,STS,validation,0.8774,,

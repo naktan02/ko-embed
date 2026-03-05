@@ -1,0 +1,3 @@
+# configs/data/ourafla.yaml
+name: ourafla
+jsonl: data/finetune_processed/en_ourafla.jsonl

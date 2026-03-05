@@ -1,0 +1,28 @@
+# 모든 텍스트 파일 LF로 통일
+* text=auto eol=lf
+
+# 명시적 텍스트 파일
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.json  text eol=lf
+*.sh    text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+*.lock  text eol=lf
+
+# 바이너리 파일 (변환 안 함)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.pkl   binary
+*.bin   binary
+*.pt    binary
+*.pth   binary
+*.safetensors binary

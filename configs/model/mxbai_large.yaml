@@ -1,0 +1,7 @@
+# ko-embed/configs/model/mxbai_large.yaml
+_target_: qcd.embedding.sbert.SentenceTransformerEncoder
+name: mxbai_large
+model_id: mixedbread-ai/mxbai-embed-large-v1
+max_length: 512
+batch_size: 16
+normalize_embeddings: true

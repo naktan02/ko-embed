@@ -1,0 +1,7 @@
+# ko-embed/configs/model/mpnet_base.yaml
+_target_: qcd.embedding.sbert.SentenceTransformerEncoder
+name: mpnet_base
+model_id: sentence-transformers/all-mpnet-base-v2
+max_length: 512
+batch_size: 32
+normalize_embeddings: true

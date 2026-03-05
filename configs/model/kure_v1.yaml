@@ -1,0 +1,8 @@
+# ko-embed/configs/model/kure_v1.yaml
+# nlpai-lab/KURE-v1: NLPAI Lab 한국어 특화 임베딩 모델
+_target_: qcd.embedding.sbert.SentenceTransformerEncoder
+name: kure_v1
+model_id: nlpai-lab/KURE-v1
+max_length: 512
+batch_size: 32
+normalize_embeddings: true

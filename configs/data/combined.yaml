@@ -1,0 +1,3 @@
+# configs/data/combined.yaml
+name: combined
+jsonl: data/finetune_processed/en_combined.jsonl

@@ -1,0 +1,8 @@
+# ko-embed/configs/model/bge_m3_ko.yaml
+# dragonkue/BGE-m3-ko: BGE-M3 한국어 특화 파인튜닝
+_target_: qcd.embedding.bge_m3.BGEM3Encoder
+name: bge_m3_ko
+model_id: dragonkue/BGE-m3-ko
+max_length: 8192
+batch_size: 32
+normalize_embeddings: true

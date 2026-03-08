@@ -177,10 +177,10 @@ if __name__ == "__main__":
     MXBAI_ID = "mixedbread-ai/mxbai-embed-large-v1"
 
     scenarios: list[tuple[str, str, Path]] = [
-        ("[1] pretrained + ourafla",         MXBAI_ID,                                       OURAFLA_TRAIN_JSONL),
-        ("[2] finetuned(ourafla) + ourafla",  str(FINETUNED_BASE / "mxbai_large_ourafla"),    OURAFLA_TRAIN_JSONL),
-        ("[3] pretrained + combined",          MXBAI_ID,                                       COMBINED_JSONL),
-        ("[4] finetuned(combined) + combined", str(FINETUNED_BASE / "mxbai_large_combined"),   COMBINED_JSONL),
+        ("[1] pretrained + ourafla",         MXBAI_ID,                                               OURAFLA_TRAIN_JSONL),
+        ("[2] finetuned(ourafla) + ourafla",  str(FINETUNED_BASE / "mxbai_large_ourafla" / "final"),  OURAFLA_TRAIN_JSONL),
+        ("[3] pretrained + combined",          MXBAI_ID,                                               COMBINED_JSONL),
+        ("[4] finetuned(combined) + combined", str(FINETUNED_BASE / "mxbai_large_combined" / "final"), COMBINED_JSONL),
     ]
 
     results: list[tuple[str, float]] = []

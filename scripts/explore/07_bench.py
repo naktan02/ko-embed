@@ -19,6 +19,7 @@ mteb 라이브러리로 영어 Retrieval/STS 벤치마크를 실행합니다.
   model=bge_base_en      : BAAI/bge-base-en-v1.5  (110M)
   model=bge_m3           : BAAI/bge-m3  (568M, 다국어 baseline)
   model=mpnet_base       : sentence-transformers/all-mpnet-base-v2 (110M)
+  model=qwen3_embedding_0_6b : Qwen/Qwen3-Embedding-0.6B (0.6B, 다국어)
 
 실행 예:
   # 전체 태스크
@@ -29,6 +30,12 @@ mteb 라이브러리로 영어 Retrieval/STS 벤치마크를 실행합니다.
 
   # Retrieval만
   python scripts/explore/07_bench.py model=bge_large_en +group=retrieval
+
+  # Qwen3 Embedding
+  python scripts/explore/07_bench.py model=qwen3_embedding_0_6b +group=retrieval
+
+  # 개별 태스크만
+  python scripts/explore/07_bench.py model=qwen3_embedding_0_6b +task=STSBenchmark
 
   # 파인튜닝된 모델 로컬 경로 지정
   python scripts/explore/07_bench.py model=bge_large_en model.model_id=models/finetuned/bge_large_en +group=sts
@@ -70,7 +77,8 @@ def main(cfg: DictConfig) -> None:
     model_name: str = cfg.model.get("name", "model")
     model_id: str = cfg.model.get("model_id", "")
     group: str = cfg.get("group", "all")          # +group=sts | retrieval | all
-    tasks = TASK_GROUPS.get(group, TASK_GROUPS["all"])
+    task: str | None = cfg.get("task", None)       # +task=SciFact 처럼 단일 태스크 선택
+    tasks = [task] if task else TASK_GROUPS.get(group, TASK_GROUPS["all"])
 
     out_dir = Path("results")
     out_dir.mkdir(exist_ok=True)
@@ -83,7 +91,16 @@ def main(cfg: DictConfig) -> None:
     print(f"[그룹] {group}  →  {tasks}")
     print(f"[디바이스] {device}  |  batch_size={batch_size}")
     # SentenceTransformer를 직접 사용 → mteb과 완전 호환
-    st_model = SentenceTransformer(model_id, trust_remote_code=True, device=device)
+    st_model = SentenceTransformer(
+        model_id,
+        trust_remote_code=True,
+        device=device,
+        model_kwargs=dict(cfg.model.get("model_kwargs", {})),
+        tokenizer_kwargs=dict(cfg.model.get("tokenizer_kwargs", {})),
+    )
+    max_length = cfg.model.get("max_length", None)
+    if max_length is not None:
+        st_model.max_seq_length = int(max_length)
     print(f"  임베딩 차원: {st_model.get_sentence_embedding_dimension()}")
 
     # ── 태스크별 실행 ──────────────────────────────────────────────────────────

@@ -1,0 +1,9 @@
+# ko-embed/configs/model/qwen3_embedding_0_6b.yaml
+_target_: qcd.embedding.sbert.SentenceTransformerEncoder
+name: qwen3_embedding_0_6b
+model_id: Qwen/Qwen3-Embedding-0.6B
+max_length: 512
+batch_size: 8
+normalize_embeddings: true
+tokenizer_kwargs:
+  padding_side: left

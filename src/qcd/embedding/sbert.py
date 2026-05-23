@@ -19,12 +19,18 @@ class SentenceTransformerEncoder(BaseEncoder):
         max_length: int = 512,
         batch_size: int = 64,
         normalize_embeddings: bool = True,
+        model_kwargs: dict | None = None,
+        tokenizer_kwargs: dict | None = None,
+        encode_kwargs: dict | None = None,
         **kwargs,
     ):
         self.model_id = model_id
         self.max_length = max_length
         self.batch_size = batch_size
         self.normalize = normalize_embeddings
+        self.model_kwargs = model_kwargs or {}
+        self.tokenizer_kwargs = tokenizer_kwargs or {}
+        self.encode_kwargs = encode_kwargs or {}
         self._model = None  # lazy load
 
     def _load(self) -> None:
@@ -34,7 +40,12 @@ class SentenceTransformerEncoder(BaseEncoder):
         from sentence_transformers import SentenceTransformer  # type: ignore
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        self._model = SentenceTransformer(self.model_id, device=device)
+        self._model = SentenceTransformer(
+            self.model_id,
+            device=device,
+            model_kwargs=self.model_kwargs,
+            tokenizer_kwargs=self.tokenizer_kwargs,
+        )
         self._model.max_seq_length = self.max_length
         print(f"  [SentenceTransformer] {self.model_id} 로드 완료 (device={device})")
 
@@ -45,5 +56,6 @@ class SentenceTransformerEncoder(BaseEncoder):
             batch_size=self.batch_size,
             normalize_embeddings=self.normalize,
             show_progress_bar=True,
+            **self.encode_kwargs,
         )
         return np.array(vecs, dtype=np.float32)

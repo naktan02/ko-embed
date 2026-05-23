@@ -1,7 +1,7 @@
 """
-scripts/explore/08_prototype_test.py
+scripts/eval/proto_eval_en.py
 ==============================================
-6가지 시나리오로 카테고리 프로토타입 분류 성능 비교.
+4가지 시나리오로 카테고리 프로토타입 분류 성능 비교.
 
 평가셋: ourafla test.csv (248개 × 4카테고리 = 992개)
 
@@ -10,13 +10,11 @@ scripts/explore/08_prototype_test.py
   [2] finetuned  mxbai  + ourafla 프로토타입  (models/finetuned/mxbai_large_ourafla)
   [3] pretrained mxbai  + combined 프로토타입
   [4] finetuned  mxbai  + combined 프로토타입 (models/finetuned/mxbai_large_combined)
-  [5] pretrained mpnet  + ourafla 프로토타입
-  [6] pretrained mpnet  + combined 프로토타입
 
 4개 카테고리: Anxiety / Depression / Suicidal / Normal
 
 실행:
-  uv run python scripts/explore/08_prototype_test.py
+  uv run python scripts/eval/proto_eval_en.py
 """
 
 from __future__ import annotations
@@ -106,14 +104,12 @@ def run_test(scenario: str, encoder, jsonl_path: Path) -> float:
     test_queries = load_test_queries(OURAFLA_TEST_CSV)
     print(f"\n[평가셋] {OURAFLA_TEST_CSV.name}: {len(test_queries)}개")
 
-    # 직접 배치 인코딩으로 속도 개선
     texts = [q for _, q in test_queries]
     labels = [l for l, _ in test_queries]
 
     print("  임베딩 계산 중...")
     all_vecs = encoder.encode(texts)  # (N, dim)
 
-    # 카테고리별 정확도 집계
     from collections import defaultdict
     cat_correct: dict[str, int] = defaultdict(int)
     cat_total:   dict[str, int] = defaultdict(int)
@@ -133,8 +129,7 @@ def run_test(scenario: str, encoder, jsonl_path: Path) -> float:
     correct = sum(cat_correct.values())
     acc = correct / total * 100
 
-    # 카테고리별 정확도 출력
-    print(f"\n  {'':>12}  {'n':>6}  {'correct':>8}  {'acc':>7}  {'confusion (pred as...)':<40}")
+    print(f"\n  {'':>12}  {'n':>6}  {'correct':>8}  {'acc':>7}  {'confusion (pred as...)':^40}")
     print(f"  {'-'*75}")
     for cat in cats_order:
         n   = cat_total.get(cat, 0)
@@ -149,7 +144,6 @@ def run_test(scenario: str, encoder, jsonl_path: Path) -> float:
     print(f"  {'-'*75}")
     print(f"  {'TOTAL':>12}  {total:>6}  {correct:>8}  {acc:>6.1f}%")
 
-    # 오답 샘플 출력 (카테고리별 최대 3개)
     if errors:
         print(f"\n  [오답 샘플 — 카테고리별 최대 3개]")
         from collections import defaultdict
@@ -161,7 +155,6 @@ def run_test(scenario: str, encoder, jsonl_path: Path) -> float:
             for t in txts[:3]:
                 print(f"      '{t[:80]}'")
 
-    # 카테고리 간 프로토타입 유사도 행렬
     print("\n[카테고리 간 프로토타입 유사도 행렬]  (대각=1.0, 0에 가까울수록 잘 분리)")
     cats = [c for c in cats_order if c in proto_vecs]
     print(f"{'':>12}" + "".join(f"{c:>12}" for c in cats))
@@ -176,21 +169,18 @@ def run_test(scenario: str, encoder, jsonl_path: Path) -> float:
 
 
 if __name__ == "__main__":
-    MXBAI_ID  = "mixedbread-ai/mxbai-embed-large-v1"
-    MPNET_ID  = "sentence-transformers/all-mpnet-base-v2"
+    MXBAI_ID = "mixedbread-ai/mxbai-embed-large-v1"
 
     scenarios: list[tuple[str, str, Path]] = [
-        ("[1] mxbai pretrained + ourafla",         MXBAI_ID,                                               OURAFLA_TRAIN_JSONL),
-        ("[2] mxbai finetuned(ourafla) + ourafla",  str(FINETUNED_BASE / "mxbai_large_ourafla" / "final"),  OURAFLA_TRAIN_JSONL),
-        ("[3] mxbai pretrained + combined",          MXBAI_ID,                                               COMBINED_JSONL),
-        ("[4] mxbai finetuned(combined) + combined", str(FINETUNED_BASE / "mxbai_large_combined" / "final"), COMBINED_JSONL),
-        ("[5] mpnet pretrained + ourafla",           MPNET_ID,                                               OURAFLA_TRAIN_JSONL),
-        ("[6] mpnet pretrained + combined",          MPNET_ID,                                               COMBINED_JSONL),
+        ("[1] pretrained + ourafla",         MXBAI_ID,                                               OURAFLA_TRAIN_JSONL),
+        ("[2] finetuned(ourafla) + ourafla",  str(FINETUNED_BASE / "mxbai_large_ourafla" / "final"),  OURAFLA_TRAIN_JSONL),
+        ("[3] pretrained + combined",          MXBAI_ID,                                               COMBINED_JSONL),
+        ("[4] finetuned(combined) + combined", str(FINETUNED_BASE / "mxbai_large_combined" / "final"), COMBINED_JSONL),
     ]
 
     results: list[tuple[str, float]] = []
     for scenario_name, model_path, jsonl_path in scenarios:
-        if not Path(model_path).exists() and model_path not in (MXBAI_ID, MPNET_ID):
+        if not Path(model_path).exists() and model_path != MXBAI_ID:
             print(f"\n[스킵] {scenario_name}  — 모델 없음: {model_path}")
             continue
         if not jsonl_path.exists():
@@ -199,15 +189,15 @@ if __name__ == "__main__":
 
         encoder = SentenceTransformerEncoder(
             model_id=model_path,
-            batch_size=32,
+            batch_size=16,
             normalize_embeddings=True,
         )
         acc = run_test(scenario_name, encoder, jsonl_path)
         results.append((scenario_name, acc))
 
     if len(results) > 1:
-        print(f"\n{'='*55}")
+        print(f"\n{'='*50}")
         print("  시나리오별 정확도 요약")
-        print(f"{'='*55}")
+        print(f"{'='*50}")
         for name, acc in results:
-            print(f"  {name:<44}  {acc:>6.1f}%")
+            print(f"  {name:<40}  {acc:>6.1f}%")

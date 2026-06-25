@@ -1,0 +1,6 @@
+_target_: qcd.embedding.sbert.SentenceTransformerEncoder
+name: stsb_roberta_base_v2
+model_id: sentence-transformers/stsb-roberta-base-v2
+max_length: 512
+batch_size: 32
+normalize_embeddings: true

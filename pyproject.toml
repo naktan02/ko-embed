@@ -1,7 +1,7 @@
 [project]
 name = "ko-embed"
 version = "0.1.0"
-description = "Korean query embedding pipeline for change-point detection research"
+description = "Benchmarking and analysis pipeline for Korean, English, and multilingual sentence embeddings across retrieval, STS, NLI, and query understanding tasks"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
